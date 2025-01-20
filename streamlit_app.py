@@ -1,56 +1,56 @@
-import streamlit as st
 import requests
 
-# API Configuration
+# API credentials
 API_KEY = "KfRiwhzgjPeFG9rviJvkpCjnr"
 BASE_URL = "https://riderts.app/bustime/api/v3/getpredictions"
 RTPIDATAFEED = "bustime"
 
-# Streamlit App
-st.title("Bus Prediction App")
-st.write("Enter a bus stop number to get predictions.")
+def get_predictions(stop_id):
+    """
+    Fetch predictions from the API for a given stop ID.
 
-# User Input with on_change callback
-def fetch_predictions():
-    if bus_stop.strip():
-        # API Request
-        params = {
-            "key": API_KEY,
-            "rtpidatafeed": RTPIDATAFEED,
-            "stpid": bus_stop,
-            "format": "json"
-        }
-        try:
-            response = requests.get(BASE_URL, params=params)
-            if response.status_code == 200:
-                data = response.json()
+    Args:
+        stop_id (str): The ID of the bus stop to retrieve predictions for.
 
-                # Handle API response
-                if "bustime-response" in data and "prd" in data["bustime-response"]:
-                    predictions = data["bustime-response"]["prd"]
+    Returns:
+        dict: The response data from the API as a dictionary, or None if there's an error.
+    """
+    # Parameters for the API request
+    params = {
+        "key": API_KEY,
+        "rtpidatafeed": RTPIDATAFEED,
+        "stpid": stop_id,
+        "format": "json"
+    }
 
-                    st.subheader(f"Predictions for Bus Stop {bus_stop}")
-                    for prediction in predictions:
-                        route = prediction.get("rt", "N/A")
-                        destination = prediction.get("des", "N/A")
-                        time = prediction.get("prdctdn", "N/A")
+    try:
+        # Make the GET request to the API
+        response = requests.get(BASE_URL, params=params)
+        response.raise_for_status()  # Raise exception for HTTP errors
 
-                        st.write(f"Route: {route}, Destination: {destination}, Arrival in: {time} minutes")
-                else:
-                    st.warning(f"The stop ID '{bus_stop}' does not exist or has no predictions.")
-            else:
-                st.error(f"Failed to fetch data. Status Code: {response.status_code}")
-        except Exception as e:
-            st.error(f"An error occurred: {e}")
+        # Parse and return the JSON response
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        print(f"Error: {e}")
+        return None
+
+if __name__ == "__main__":
+    print("Welcome to the Bus Prediction System!")
+    stop_id = input("Please enter the stop ID: ").strip()  # Ask the user for the stop ID
+
+    # Fetch predictions for the given stop ID
+    predictions = get_predictions(stop_id)
+
+    if predictions:
+        # Check if the API response contains predictions
+        if "bustime-response" in predictions and "prd" in predictions["bustime-response"]:
+            print("\nPredictions for stop ID:", stop_id)
+            for prd in predictions["bustime-response"]["prd"]:
+                route = prd["rt"]
+                destination = prd["des"]
+                time = prd["prdctdn"]
+                print(f"Route: {route}, Destination: {destination}, Arrival in: {time} minutes")
+        else:
+            print(f"No predictions available for stop ID {stop_id}.")
     else:
-        st.warning("Please enter a valid bus stop number.")
-
-# Add the text input with callback to trigger on Enter
-bus_stop = st.text_input(
-    "Bus Stop Number:",
-    on_change=fetch_predictions,
-)
-
-# Add a button for manual trigger
-if st.button("Get Prediction"):
-    fetch_predictions()
+        print("Failed to retrieve predictions. Please try again later.")
